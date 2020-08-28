@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 function show_help {
   echo """
-  Build Alpine or Debian Based CKAN Image
+  Build Alpine or Debian based CKAN image
 
   Usage:
     ./build.sh [options]
