@@ -1,5 +1,5 @@
 VERSION := $(shell git describe --tags --exact-match 2>/dev/null || echo latest)
-DOCKERHUB_NAMESPACE ?= hazeltek
+DOCKERHUB_NAMESPACE ?= ehealthafrica
 IMAGE := ${DOCKERHUB_NAMESPACE}/ckan:${VERSION}-alpine
 
 build:

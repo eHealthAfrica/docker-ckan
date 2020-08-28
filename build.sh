@@ -54,7 +54,7 @@ function build {
 deb=no
 dry_run=no
 nocache=no
-namespace=${DOCKERHUB_NAMESPACE:=hazeltek}
+namespace=${DOCKERHUB_NAMESPACE:=ehealthafrica}
 version=$(git describe --tags --exact-match 2>/dev/null || echo latest)
 
 while [[ $# -gt 0 ]]; do
