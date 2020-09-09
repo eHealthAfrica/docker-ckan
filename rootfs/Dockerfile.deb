@@ -75,8 +75,8 @@ RUN mkdir -p ${SRC_DIR}
 # Fetch and build the default CKAN extensions
 RUN pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#egg=ckanext-envvars
 RUN pip wheel --wheel-dir=/wheels git+${S3FILESTORE_GIT_URL}@${S3FILESTORE_GIT_BRANCH}#egg=ckanext-s3filestore
-RUN pip wheel --wheel-dir=/wheels -r https://raw.githubusercontent.com/okfn/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
-RUN curl -o /wheels/s3filestore.txt https://raw.githubusercontent.com/okfn/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
+RUN pip wheel --wheel-dir=/wheels -r https://raw.githubusercontent.com/keitaroinc/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
+RUN curl -o /wheels/s3filestore.txt https://raw.githubusercontent.com/keitaroinc/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
 
 
 ################
