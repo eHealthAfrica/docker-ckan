@@ -1,8 +1,8 @@
 #!/bin/bash
 # Run any startup scripts provided by images extending this one
-if [[ -d "${APP_DIR}/docker-entrypoint.d" ]]
+if [[ -d "/docker-entrypoint.d" ]]
 then
-    for f in ${APP_DIR}/docker-entrypoint.d/*; do
+    for f in /docker-entrypoint.d/*; do
         case "$f" in
             *.sh)     echo "$0: Running init file $f"; . "$f" ;;
             *.py)     echo "$0: Running init file $f"; python "$f"; echo ;;
@@ -37,10 +37,6 @@ then
     # Start uwsgi
     if [ "$CKAN___DEBUG" = true ] || [ "$CKAN___DEBUG" = True ]
     then
-      ## to use uwsgi in debug mode uncomment next two lines and comment the paster command
-      # UWSGI_OPTS="$UWSGI_OPTS --py-autoreload 2"
-      # uwsgi $UWSGI_OPTS
-
       paster serve /srv/app/production.ini --reload
     else
       uwsgi $UWSGI_OPTS

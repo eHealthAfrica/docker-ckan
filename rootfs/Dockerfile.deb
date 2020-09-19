@@ -17,18 +17,18 @@ WORKDIR ${SRC_DIR}
 RUN apt-get -q -y update \
     && DEBIAN_FRONTEND=noninteractive apt-get -q -y upgrade \
     && apt-get -q -y install \
+       build-essential \
+       git-core \
        python-dev \
        python-pip \
        python-wheel \
-       libpq-dev \
-       libxml2-dev \
-       libxslt-dev \
-       libssl-dev \
        libffi-dev \
        libpcre3-dev \
        libpcre3 \
-       git-core \
-       build-essential \
+       libpq-dev \
+       libssl-dev \
+       libxml2-dev \
+       libxslt1-dev \
     && apt-get -q clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -75,8 +75,8 @@ RUN mkdir -p ${SRC_DIR}
 # Fetch and build the default CKAN extensions
 RUN pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#egg=ckanext-envvars
 RUN pip wheel --wheel-dir=/wheels git+${S3FILESTORE_GIT_URL}@${S3FILESTORE_GIT_BRANCH}#egg=ckanext-s3filestore
-RUN pip wheel --wheel-dir=/wheels -r https://raw.githubusercontent.com/okfn/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
-RUN curl -o /wheels/s3filestore.txt https://raw.githubusercontent.com/okfn/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
+RUN pip wheel --wheel-dir=/wheels -r https://raw.githubusercontent.com/keitaroinc/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
+RUN curl -o /wheels/s3filestore.txt https://raw.githubusercontent.com/keitaroinc/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
 
 
 ################
@@ -97,15 +97,17 @@ WORKDIR ${APP_DIR}
 RUN apt-get -q -y update \
     && DEBIAN_FRONTEND=noninteractive apt-get -q -y upgrade \
     && apt-get -q -y install \
-       gettext \
        curl \
-       postgresql-client && \
+       gettext \
+       git-core \
+       procps \
+       postgresql-client \
        python \
        python-pip \
        libmagic1 \
        libpcre3 \
-       libxslt \
        libxml2 \
+       libxslt1.1 && \
     # Create SRC_DIR
     mkdir -p ${SRC_DIR}
 
@@ -148,7 +150,7 @@ RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 COPY setup/app ${APP_DIR}
 
 # Create entry point directory for children image scripts
-ONBUILD RUN mkdir docker-entrypoint.d
+ONBUILD RUN mkdir /docker-entrypoint.d
 
 EXPOSE 5000
 
