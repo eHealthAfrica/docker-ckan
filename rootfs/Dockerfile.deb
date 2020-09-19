@@ -100,6 +100,7 @@ RUN apt-get -q -y update \
        curl \
        gettext \
        git-core \
+       procps \
        postgresql-client \
        python \
        python-pip \
