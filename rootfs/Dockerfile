@@ -157,7 +157,7 @@ RUN rm -rf /srv/app/wheels /srv/app/ext_wheels
 COPY setup/app ${APP_DIR}
 
 # Create entrypoint directory for children image scripts
-ONBUILD RUN mkdir /docker-entrypoint.d
+ONBUILD RUN mkdir docker-entrypoint.d
 
 EXPOSE 5000
 
