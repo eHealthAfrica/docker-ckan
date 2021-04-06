@@ -5,7 +5,7 @@ FROM debian:buster-slim as ckanbuild
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.8.4
+ENV GIT_BRANCH=ckan-2.8.7
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -57,8 +57,8 @@ ENV DEFAULT_EXTENSIONS envvars s3filestore
 # Locations and tags, please use specific tags or revisions
 ENV ENVVARS_GIT_URL=https://github.com/okfn/ckanext-envvars
 ENV ENVVARS_GIT_BRANCH=0.0.1
-ENV S3FILESTORE_GIT_URL=https://github.com/okfn/ckanext-s3filestore
-ENV S3FILESTORE_GIT_BRANCH=33d4b60
+ENV S3FILESTORE_GIT_URL=https://github.com/keitaroinc/ckanext-s3filestore
+ENV S3FILESTORE_GIT_BRANCH=ckan-2.8
 
 RUN apt-get -q -y update \
     && DEBIAN_FRONTEND=noninteractive apt-get -q -y upgrade \
@@ -83,7 +83,7 @@ RUN curl -o /wheels/s3filestore.txt https://raw.githubusercontent.com/keitaroinc
 ## Build Main ##
 ################
 FROM debian:buster-slim
-LABEL MAINTAINER="Abdul-Hakeem Shaibu <s.abdulhakeeem@gmail.com>"
+LABEL author="eHealth Africa"
 
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src

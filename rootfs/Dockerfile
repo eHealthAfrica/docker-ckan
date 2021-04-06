@@ -5,7 +5,7 @@ FROM alpine:3.12 as ckanbuild
 
 # Set CKAN version to build
 ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.8.4
+ENV GIT_BRANCH=ckan-2.8.7
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -65,7 +65,7 @@ ENV DEFAULT_EXTENSIONS envvars s3filestore
 ENV ENVVARS_GIT_URL=https://github.com/okfn/ckanext-envvars
 ENV ENVVARS_GIT_BRANCH=0.0.1
 ENV S3FILESTORE_GIT_URL=https://github.com/keitaroinc/ckanext-s3filestore
-ENV S3FILESTORE_GIT_BRANCH=efd5711
+ENV S3FILESTORE_GIT_BRANCH=ckan-2.8
 
 RUN apk add --no-cache \
         git \
@@ -91,7 +91,7 @@ RUN curl -o /wheels/s3filestore.txt https://raw.githubusercontent.com/keitaroinc
 ############
 FROM alpine:3.12
 
-MAINTAINER Keitaro Inc <info@keitaro.com>
+LABEL author="eHealth Africa"
 
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src
