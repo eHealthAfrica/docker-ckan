@@ -8,5 +8,8 @@ build:
 build-no-cache:
 	docker build --no-cache -t ${IMAGE} rootfs
 
+lint-python:
+	python -m black --skip-string-normalization -l 98 .
+
 push: build
 	docker push ${IMAGE}

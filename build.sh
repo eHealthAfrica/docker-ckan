@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+
+deb=no
+dry_run=no
+build_ckan=yes
+nocache=no
+target_image=
+target_image_fullname=
+namespace=${DOCKERHUB_NAMESPACE:=ehealthafrica}
+version=$(git describe --tags --exact-match 2>/dev/null || echo latest)
+
+
 function show_help {
   echo """
   Build Alpine or Debian based CKAN image
@@ -9,6 +20,7 @@ function show_help {
     ./build.sh [options]
 
   Options:
+    --build-datapusher      build image for datapusher (default: build ckan image)
     --deb         | -d      build Debain image.
     --dry-run               performs a dry-run to show configs.
     --help        | -h      show this message.
@@ -20,45 +32,51 @@ function show_help {
 
 function _build_image_name {
   local deb=$1
-  local namespace=$2
-  local tag=$3
+  local build_ckan=$2
+  local namespace=$3
+  local tag=$4
 
-  local image_name="${namespace}/ckan:${tag}"
-  if [[ ${deb} = "no" ]]; then
-    image_name="${image_name}-alpine"
+  target_image=ckan
+  target_image_fullname="${namespace}/${target_image}:${tag}"
+
+  if [[ ${build_ckan} = "no" ]]; then
+    target_image=datapusher
+    target_image_fullname="${namespace}/ckan-${target_image}:${tag}"
   fi
 
-  result=${image_name}
+  if [[ ${deb} = "no" ]]; then
+    target_image_fullname="${target_image_fullname}-alpine"
+  fi
 }
 
 function build {
   local deb=$1
-  local image_name=$2
-  local nocache=$3
+  local image=$2
+  local image_fullname=$3
+  local nocache=$4
   local filename=Dockerfile
 
   if [[ ${deb} = "yes" ]]; then
     filename=Dockerfile.deb
   fi
 
-  echo ">> Building CKAN Image '${image_name}' (using ${filename}) ..."
+  echo ">> Building CKAN Image '${image_fullname}' (using ${filename}) ..."
   echo ""
 
   if [[ ${nocache} = "yes" ]]; then
-    docker build -f rootfs/${filename} -t ${image_name} rootfs
+    docker build -f rootfs/${image}/${filename} -t ${image_fullname} rootfs/${image}
   else
-    docker build --no-cache -f rootfs/${filename} -t ${image_name} rootfs
+    docker build --no-cache -f rootfs/${image}/${filename} -t ${image_fullname} rootfs/${image}
   fi
 }
 
-deb=no
-dry_run=no
-nocache=no
-namespace=${DOCKERHUB_NAMESPACE:=ehealthafrica}
-version=$(git describe --tags --exact-match 2>/dev/null || echo latest)
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --build-datapusher )
+      build_ckan=no
+      shift
+    ;;
+
     -d | --deb )
       deb=yes
       shift
@@ -94,11 +112,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 # build image name which is stored in global var: result
-_build_image_name ${deb} ${namespace} ${version}
+_build_image_name ${deb} ${build_ckan} ${namespace} ${version}
 
 if [[ $dry_run = "yes" ]]; then
-  echo "deb=${deb} namespace=${namespace} tag=${version}"
-  echo ${result}
+  echo "deb=${deb} build-ckan=${build_ckan} namespace=${namespace} tag=${version}"
+  echo ${target_image_fullname}
 else
-  build ${deb} ${result} ${nocache}
+  build ${deb} ${target_image} ${target_image_fullname} ${nocache}
 fi
