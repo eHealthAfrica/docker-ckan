@@ -54,7 +54,7 @@ RUN apt-get install --no-install-recommends -y \
     python3-dev \
     libffi-dev \
     libxml2-dev \
-    libxslt-dev
+libxslt-dev
 
 # Use gcc 10
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10 --slave /usr/bin/gcov gcov /usr/bin/gcov-10 --slave /usr/bin/x86_64-linux-gnu-gcc x86_64-linux-gnu-gcc /usr/bin/x86_64-linux-gnu-gcc-10
@@ -74,12 +74,21 @@ RUN pip install setuptools==44.1.0
 
 # Fetch and build CKAN and requirements
 RUN pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
+
 # Copy patches and apply patches script
 COPY ./patches ${SRC_DIR}/patches
 COPY ./scripts/apply_ckan_patches.sh ${SRC_DIR}/apply_ckan_patches.sh
+
 # Apply patches
 RUN ${SRC_DIR}/apply_ckan_patches.sh
 RUN rm -rf /srv/app/src/ckan/.git
+
+#### PATCH SINCE CYTHON UPDATED TO 3.0.0 ###
+RUN sed -i 's/pyyaml==5.4.1/pyyaml>=6.0.1/g' ckan/requirements.txt
+
+#### Upgrade to webassets 2.0 to use yaml.safe_load with pyyaml>=6.0.1
+RUN sed -i 's/webassets==0.12.1/webassets>=2.0/g' ckan/requirements.txt
+
 RUN pip wheel --wheel-dir=/wheels -r ckan/requirements.txt
 RUN pip wheel --wheel-dir=/wheels uWSGI==2.0.20 gevent==21.12.0 greenlet==1.1.3
 

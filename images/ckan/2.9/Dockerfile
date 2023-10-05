@@ -53,6 +53,7 @@ RUN pip install setuptools==44.1.0
 
 # Fetch and build CKAN and requirements
 RUN pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
+
 # Copy patches and apply patches script
 COPY ./patches ${SRC_DIR}/patches
 COPY ./scripts/apply_ckan_patches.sh ${SRC_DIR}/apply_ckan_patches.sh
@@ -63,6 +64,9 @@ RUN rm -rf /srv/app/src/ckan/.git
 
 #### PATCH SINCE CYTHON UPDATED TO 3.0.0 ###
 RUN sed -i 's/pyyaml==5.4.1/pyyaml>=6.0.1/g' ckan/requirements.txt
+
+#### Upgrade to webassets 2.0 to use yaml.safe_load with pyyaml>=6.0.1
+RUN sed -i 's/webassets==0.12.1/webassets>=2.0/g' ckan/requirements.txt
 
 # RUN pip-compile ckan/requirements.in 
 RUN pip wheel --wheel-dir=/wheels -r ckan/requirements.txt
