@@ -1,15 +1,15 @@
-VERSION := $(shell git describe --tags --exact-match 2>/dev/null || echo latest)
-DOCKERHUB_NAMESPACE ?= ehealthafrica
-IMAGE := ${DOCKERHUB_NAMESPACE}/ckan:${VERSION}-alpine
-
 build:
-	docker build -t ${IMAGE} rootfs
+	@./build.sh --deb
 
-build-no-cache:
-	docker build --no-cache -t ${IMAGE} rootfs
+build/dry-run:
+	@./build.sh --deb --dry-run
 
-lint-python:
-	python -m black --skip-string-normalization -l 98 .
+build/no-cache:
+	@./build.sh --deb --no-cache
 
-push: build
-	docker push ${IMAGE}
+build/datapusher:
+	@./build.sh --datapusher
+
+build/datapusher/no-cache:
+	@./build.sh --datapusher --no-cache
+

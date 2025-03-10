@@ -4,8 +4,8 @@
 FROM alpine:3.13.7 as ckanbuild
 
 # Set CKAN version to build
-ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.9.5
+ENV GIT_URL=https://github.com/ckan/ckan
+ENV GIT_BRANCH=ckan-2.9.10
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src

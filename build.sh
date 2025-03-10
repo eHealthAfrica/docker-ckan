@@ -8,9 +8,8 @@ build_ckan=yes
 nocache=no
 target_image=
 target_image_fullname=
-namespace=${DOCKERHUB_NAMESPACE:=ehealthafrica}
-version=$(git describe --tags --exact-match 2>/dev/null || echo latest)
-
+namespace=${DOCKERHUB_NAMESPACE:-ehealthafrica}
+version=$(git describe --tags --exact-match 2>/dev/null || echo ${CKAN_VERSION}-dev)
 
 function show_help {
   echo """
@@ -20,13 +19,13 @@ function show_help {
     ./build.sh [options]
 
   Options:
-    --build-datapusher      build image for datapusher (default: build ckan image)
-    --deb         | -d      build Debain image.
-    --dry-run               performs a dry-run to show configs.
-    --help        | -h      show this message.
-    --namespace             docker hub account name.
-    --no-cache              build image without using cache.
-    --tag         | -t      the image tag.
+    --datapusher        build image for datapusher (default: build ckan image)
+    --deb         | -d  build Debain image.
+    --dry-run           performs a dry-run to show configs.
+    --help        | -h  show this message.
+    --namespace         docker hub account name.
+    --no-cache          build image without using cache.
+    --tag         | -t  the image tag.
   """
 }
 
@@ -41,6 +40,7 @@ function _build_image_name {
 
   if [[ ${build_ckan} = "no" ]]; then
     target_image=datapusher
+    tag=$(git describe --tags --exact-match 2>/dev/null || echo ${DATAPUSHER_VERSION:-latest})
     target_image_fullname="${namespace}/ckan-${target_image}:${tag}"
   fi
 
@@ -64,15 +64,15 @@ function build {
   echo ""
 
   if [[ ${nocache} = "yes" ]]; then
-    docker build -f rootfs/${image}/${filename} -t ${image_fullname} rootfs/${image}
+    docker build -f images/${image}/${filename} -t ${image_fullname} images/${image}
   else
-    docker build --no-cache -f rootfs/${image}/${filename} -t ${image_fullname} rootfs/${image}
+    docker build --no-cache -f images/${image}/${filename} -t ${image_fullname} images/${image}
   fi
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --build-datapusher )
+    --datapusher )
       build_ckan=no
       shift
     ;;
