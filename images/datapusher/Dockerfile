@@ -48,7 +48,9 @@ RUN pip wheel --wheel-dir=/wheels -r ${REQUIREMENTS_URL}
 RUN curl -o /wheels/requirements.txt ${REQUIREMENTS_URL}
 
 # Get uwsgi and gevent from pip
-RUN pip wheel --wheel-dir=/wheels uwsgi==2.0.19.1 gevent==21.12.0 greenlet==1.1.3
+RUN pip wheel --wheel-dir=/wheels \
+        uwsgi==2.0.19.1 gevent==21.12.0 greenlet==1.1.3 \
+        flask==2.1.0 flask-login==0.5.0 werkzeug==2.0.3
 
 
 ############
@@ -77,7 +79,9 @@ RUN curl -o /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
 COPY --from=build /wheels /srv/app/wheels
 
 # Install uwsgi and gevent
-RUN pip install --no-index --find-links=/srv/app/wheels uwsgi==2.0.19.1 gevent==21.12.0
+RUN pip install --no-index --find-links=/srv/app/wheels \
+        uwsgi==2.0.19.1 gevent==21.12.0 \
+        flask==2.1.0 flask-login==0.5.0 werkzeug==2.0.3
 
 # Create a local user and group to run the app
 RUN addgroup -g 92 -S ckan && \
