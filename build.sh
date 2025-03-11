@@ -4,12 +4,11 @@ set -Eeuo pipefail
 
 deb=no
 dry_run=no
-build_ckan=yes
 nocache=no
-target_image=
+target_image=ckan
 target_image_fullname=
 namespace=${DOCKERHUB_NAMESPACE:-ehealthafrica}
-version=$(git describe --tags --exact-match 2>/dev/null || echo ${CKAN_VERSION}-dev)
+tag=$(git describe --tags --exact-match 2>/dev/null || echo ${CKAN_VERSION})
 
 function show_help {
   echo """
@@ -19,7 +18,8 @@ function show_help {
     ./build.sh [options]
 
   Options:
-    --datapusher        build image for datapusher (default: build ckan image)
+    --datapusher        build image for datapusher
+    --solr              build image for solr
     --deb         | -d  build Debain image.
     --dry-run           performs a dry-run to show configs.
     --help        | -h  show this message.
@@ -31,16 +31,19 @@ function show_help {
 
 function _build_image_name {
   local deb=$1
-  local build_ckan=$2
+  local target_name=$2
   local namespace=$3
-  local tag=$4
 
-  target_image=ckan
+  tag=$4
   target_image_fullname="${namespace}/${target_image}:${tag}"
 
-  if [[ ${build_ckan} = "no" ]]; then
-    target_image=datapusher
+  if [[ ${target_name} = "datapusher" ]]; then
     tag=$(git describe --tags --exact-match 2>/dev/null || echo ${DATAPUSHER_VERSION:-latest})
+    target_image_fullname="${namespace}/ckan-${target_image}:${tag}"
+  fi
+
+  if [[ ${target_name} = "solr" ]]; then
+    tag=$(git describe --tags --exact-match 2>/dev/null || echo ${SOLR_VERSION:-latest})
     target_image_fullname="${namespace}/ckan-${target_image}:${tag}"
   fi
 
@@ -63,17 +66,27 @@ function build {
   echo ">> Building CKAN Image '${image_fullname}' (using ${filename}) ..."
   echo ""
 
+  local image_dir=images/${image}
+  if [[ ${target_image} = "solr" ]]; then
+    image_dir=compose/${image}
+  fi
+
   if [[ ${nocache} = "yes" ]]; then
-    docker build -f images/${image}/${filename} -t ${image_fullname} images/${image}
+    docker build -f ${image_dir}/${filename} -t ${image_fullname} ${image_dir}
   else
-    docker build --no-cache -f images/${image}/${filename} -t ${image_fullname} images/${image}
+    docker build --no-cache -f ${image_dir}/${filename} -t ${image_fullname} ${image_dir}
   fi
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --datapusher )
-      build_ckan=no
+      target_image="datapusher"
+      shift
+    ;;
+
+    --solr )
+      target_image="solr"
       shift
     ;;
 
@@ -105,17 +118,17 @@ while [[ $# -gt 0 ]]; do
 
     -t | --tag )
       shift
-      version=$1
+      tag=$1
       shift
     ;;
   esac
 done
 
 # build image name which is stored in global var: result
-_build_image_name ${deb} ${build_ckan} ${namespace} ${version}
+_build_image_name ${deb} ${target_image} ${namespace} ${tag}
 
 if [[ $dry_run = "yes" ]]; then
-  echo "deb=${deb} build-ckan=${build_ckan} namespace=${namespace} tag=${version}"
+  echo "deb=${deb} target-image=${target_image} namespace=${namespace} tag=${tag}"
   echo ${target_image_fullname}
 else
   build ${deb} ${target_image} ${target_image_fullname} ${nocache}
