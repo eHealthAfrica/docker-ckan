@@ -4,6 +4,8 @@
 
 This repository contains the necessary files for building a base docker image for CKAN. The build can target either [Alpine Linux](https://alpinelinux.org/) or [Debian Linux](https//debian.org) and only includes required extensions to start a CKAN instance. This is based-off Keitaro's [docker-ckan](https://github.com/keitaroinc/docker-ckan).
 
+Additionally, the repository now contains necessary files for building Docker images for `Datapusher` and `Solr` and a sample Docker Compose setup with all services required to run a CKAN instance running on Docker. 
+
 > **NOTE**  
 > The `master` branch tracks and absorbs changes from the upstream Keitaro repository which then goes into the `develop` branch. The `develop` contains our modifications to the original work done by Keitaro mostly to include support for building a Debian Linux based CKAN image. The Debian build is modelled after the original Alpine build, to ensure the same build and runtime mechanisms apply across the targetted distros.
 >
@@ -20,6 +22,8 @@ Usage:
   ./build.sh [options]
 
 Options:
+  --datapusher            build image for datapusher
+  --solr                  build image for solr
   --deb         | -d      build Debain image.
   --dry-run               performs a dry-run to show configs.
   --help        | -h      show this message.
@@ -28,7 +32,9 @@ Options:
   --tag         | -t      the image tag.
 ```
 
-The script is configured to build an `Alpine` image by default (except when `--deb` flag is provided). The built image is named in the form `<namespace>/ckan` and tagged with the latest tag for the repository or "latest" if there is none (or uses value from `--tag <ckan-version>` option if provided). The resulting full image name becomes `<namespace>/ckan:<tag>-alpine` for Alpine or just `<namespace>/ckan:<tag>` for a Debian image. For instance: `ehealthafrica/ckan:2.7.8-alpine`.
+The script is configured to build an `Alpine` image by default (except when `--deb` flag is provided). The built image is named in the form `<namespace>/ckan` for CKAN and `<namespace>/ckan-<service>` for Solr and Datapuhser. The built image is tagged with the version set in `.env` for the service or "latest" if there is none. 
+
+The resulting full image name becomes `<namespace>/ckan(-service):<tag>-alpine` for Alpine or just `<namespace>/ckan(-service):<tag>` for a Debian image. For instance: `ehealthafrica/ckan:2.7.8-alpine` and `ehealthafrica/ckan-solr:9-alpine`.
 
 ## List
 
@@ -43,10 +49,10 @@ Check if the image shows up in the list of images:
 To start and test newly created image run:
 
 ```sh
- docker run <namespace>/ckan:<image-tag>
+ docker run --rm --name <image-name> <namespace>/ckan:<image-tag>
 ```
 
-Check if CKAN was succesfuly started on <http://localhost:5000>. The ckan site url is configured in ENV CKAN_SITE_URL.
+Check if CKAN was succesfuly started on <http://localhost:5000>. The ckan site url is configured in `ENV CKAN_SITE_URL`.
 
 ## Upload to DockerHub
 
@@ -60,9 +66,11 @@ docker push [options] <docker-hub>/ckan:<image-tag>
 
 ## Upgrade
 
-To upgrade the Docker files to use new CKAN version, in the Dockerfiles you should change:
+To upgrade the Docker files to use a new CKAN version, in the Dockerfiles you should change:
 
 > ENV GIT_BRANCH={ckan_release}
+
+and also update the `CKAN_VERSION` entry in the `.env` file.
 
 Check [CKAN repository](https://github.com/ckan/ckan/releases) for the latest releases. 
 If there are new libraries used by the new version requirements, those needs to be included too.
@@ -71,8 +79,9 @@ If there are new libraries used by the new version requirements, those needs to 
 
 Default extensions used in the Dockerfile  are kept in:
 
-> ENV CKAN__PLUGINS envvars image_view text_view recline_view datastore datapusher
+> ENV CKAN__PLUGINS="envvars image_view text_view recline_view datastore datapusher"
 
 ## Add new scripts
 
 You can add scripts to CKAN custom images and copy them to the *docker-entrypoint.d* directory. Any *.sh or *.py file in that directory will be executed after the main initialization script (prerun.py) is executed.
+
