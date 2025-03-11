@@ -13,12 +13,9 @@ then
 fi
 
 # Add session secret from chart
-if [[ -z $BEAKER_SESSION_SECRET ||
-      -v $BEAKER_SESSION_SECRET ||
-      -z $JWT_ENCODE_SECRET ||
-      -v $JWT_ENCODE_SECRET ||
-      -z $JWT_DECODE_SECRET ||
-      -v $JWT_DECODE_SECRET
+if [[ -z $BEAKER_SESSION_SECRET || -v $BEAKER_SESSION_SECRET ||
+      -z $JWT_ENCODE_SECRET     || -v $JWT_ENCODE_SECRET ||
+      -z $JWT_DECODE_SECRET     || -v $JWT_DECODE_SECRET
    ]]; then
   echo "Not all environment variables are set. Generating sessions..."
 else
@@ -33,10 +30,14 @@ then
     echo "Setting secrets in ini file"
     ckan config-tool $APP_DIR/production.ini "beaker.session.secret=$(python3 -c 'import secrets; print(secrets.token_urlsafe())')"
     ckan config-tool $APP_DIR/production.ini "WTF_CSRF_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe())')"
+
     JWT_SECRET=$(python3 -c 'import secrets; print("string:" + secrets.token_urlsafe())')
     ckan config-tool $APP_DIR/production.ini "api_token.jwt.encode.secret=$JWT_SECRET"
     ckan config-tool $APP_DIR/production.ini "api_token.jwt.decode.secret=$JWT_SECRET"
 fi
+
+# update ckan-plugins entry. useful for quickly picking changes during dev
+ckan config-tool ${APP_DIR}/production.ini "ckan.plugins = ${CKAN__PLUGINS}"
 
 # Run the prerun script to init CKAN and create the default admin user
 python prerun.py || { echo '[CKAN prerun] FAILED. Exiting...'; exit 1; }
