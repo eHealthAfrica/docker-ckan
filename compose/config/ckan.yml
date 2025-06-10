@@ -1,0 +1,40 @@
+services:
+  ckan:
+    container_name: ckan
+    image: ehealthafrica/ckan:${CKAN_VERSION}
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      solr:
+        condition: service_healthy
+        restart: true
+    ports:
+      - "0.0.0.0:${CKAN_PORT}:5000"
+    env_file:
+      - config/.postgres.env
+      - config/.ckan.env
+    volumes:
+      - ${PWD}/images/ckan/setup/app/start_ckan.sh:/srv/app/start_ckan.sh
+      - ${PWD}/images/ckan/setup/app/uwsgi.conf:/srv/app/uwsgi.conf
+      - ${PWD}/images/ckan/setup/app/prerun.py:/srv/app/prerun.py
+      - ckan_data:/srv/app/data
+    stdin_open: true
+    tty: true
+
+  datapusher:
+    container_name: datapusher
+    image: ehealthafrica/ckan-datapusher:${DATAPUSHER_VERSION}-alpine
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - config/.datapusher.env
+
+volumes:
+  ckan_data:

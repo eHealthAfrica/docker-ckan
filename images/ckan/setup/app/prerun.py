@@ -1,13 +1,16 @@
+import base64
 import json
 import os
-import psycopg2
 import re
-import urllib.request, urllib.error, urllib.parse
 import subprocess
 import sys
 import time
-from sqlalchemy.engine.url import make_url
+import urllib.error
+import urllib.parse
+import urllib.request
 
+import psycopg2
+from sqlalchemy.engine.url import make_url
 
 RETRY = 5
 ckan_ini = os.environ.get('CKAN_INI', '/srv/app/production.ini')
@@ -56,19 +59,29 @@ def check_solr_connection(retry=None):
         sys.exit(1)
 
     url = os.environ.get('CKAN_SOLR_URL', '')
+    username = os.environ.get('CKAN_SOLR_USER', '')
+    password = os.environ.get('CKAN_SOLR_PASSWORD', '')
     search_url = '{url}/schema/name?wt=json'.format(url=url)
 
     try:
-        connection = urllib.request.urlopen(search_url)
+        if not username:
+            connection = urllib.request.urlopen(search_url)
+        else:
+            credential = bytes('%s:%s' % (username, password), 'ascii')
+            b64_string = base64.b64encode(credential)
+            auth_header = 'Basic %s' % b64_string.decode('utf-8')
+
+            request = urllib.request.Request(search_url)
+            request.add_header('Authorization', auth_header)
+            connection = urllib.request.urlopen(request)
+
     except urllib.error.URLError as e:
-        print((str(e)))
+        print(e)
         print('[prerun] Unable to connect to solr...try again in a while.')
 
         time.sleep(10)
         check_solr_connection(retry=retry - 1)
     else:
-        import re
-
         conn_info = connection.read()
         schema_name = json.loads(conn_info)
         if 'ckan' in schema_name['name']:
@@ -103,7 +116,6 @@ def init_db():
 
 
 def init_datastore():
-
     conn_str = os.environ.get('CKAN_DATASTORE_WRITE_URL')
     if not conn_str:
         print('[prerun] Skipping datastore initialization')
@@ -130,10 +142,10 @@ def init_datastore():
 
         perms_sql = datastore_perms.stdout.read()
         perms_sql = perms_sql.decode('utf-8')
-        perms_sql = perms_sql.replace("@" + db_host, "")
+        perms_sql = perms_sql.replace('@' + db_host, '')
 
         # Remove internal pg command as psycopg2 does not like it
-        perms_sql = re.sub('\\\\connect \"(.*)\"', '', perms_sql)
+        perms_sql = re.sub('\\\\connect "(.*)"', '', perms_sql)
         cursor.execute(perms_sql)
         for notice in connection.notices:
             print(notice)

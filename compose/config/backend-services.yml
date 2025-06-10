@@ -1,0 +1,54 @@
+services:
+  db:
+    container_name: db
+    build:
+      context: postgresql
+    networks:
+      - backend
+    env_file:
+      - config/.postgres.env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ckan"]
+
+  solr:
+    container_name: solr
+    image: ehealthafrica/ckan-solr:${SOLR_VERSION}-alpine
+    build:
+      context: solr
+      args:
+        CKAN_BRANCH: ckan-${CKAN_VERSION}
+        SOLR_VERSION: ${SOLR_VERSION}
+    networks:
+      - backend
+    env_file:
+      - ${PWD}/.env
+      - config/.solr.env
+    ports:
+      - 8983:8983
+    volumes:
+      - solr_data:/var/solr
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/solr/bin/solr","status"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  redis:
+    container_name: redis
+    image: redis:${REDIS_VERSION}
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  pg_data:
+  solr_data:
+

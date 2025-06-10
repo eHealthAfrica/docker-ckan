@@ -1,0 +1,16 @@
+# docker-compose build && docker-compose up -d
+include:
+  - path: config/ckan.yml
+    env_file: 
+      - config/.ckan.env
+      - ${PWD}/.env
+    project_directory: .
+  - path: config/backend-services.yml
+    env_file: 
+      - config/.postgres.env
+      - ${PWD}/.env
+    project_directory: .
+
+networks:
+  frontend:
+  backend:

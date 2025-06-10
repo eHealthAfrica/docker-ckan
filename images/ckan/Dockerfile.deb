@@ -1,11 +1,18 @@
-##################
-### Build CKAN ###
-##################
-FROM alpine:3.13.7 as ckanbuild
+##########################
+## Build CKAN :: Ubuntu ##
+##########################
+FROM ubuntu:focal-20220316 AS ckanbuild
 
 # Set CKAN version to build
-ENV GIT_URL=https://github.com/ckan/ckan.git
-ENV GIT_BRANCH=ckan-2.9.5
+ENV GIT_URL=https://github.com/ckan/ckan
+ENV GIT_BRANCH=ckan-2.9.11
+
+# Set timezone
+ENV TZ=UTC
+RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+
+# Set Locale
+ENV LC_ALL=en_US.UTF-8
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
@@ -13,30 +20,45 @@ ENV PIP_SRC=${SRC_DIR}
 
 WORKDIR ${SRC_DIR}
 
-# Packages to build CKAN requirements and plugins
-RUN apk add --no-cache \
-        git \
-        curl \
-        python3 \
-        postgresql-dev \
-        linux-headers \
-        gcc \
-        make \
-        g++ \
-        autoconf \
-        automake \
-        libtool \
-        libffi-dev \
-        musl-dev \
-        pcre-dev \
-        pcre \
-        python3-dev \
-        libffi-dev \
-        libxml2-dev \
-        libxslt-dev
+# Set the locale
+RUN apt-get update
+RUN apt-get install --no-install-recommends -y locales
+RUN sed -i "/${LC_ALL}/s/^# //g" /etc/locale.gen
+RUN dpkg-reconfigure --frontend=noninteractive locales
+RUN update-locale LANG=${LC_ALL}
 
-# link python to python3
-RUN ln -s /sur/bin/python3 /usr/bin/python
+# Packages to build CKAN requirements and plugins
+RUN apt-get install --no-install-recommends -y \
+    apt-utils \
+    git \
+    curl \
+    ca-certificates \
+    python3 \
+    libpq-dev \
+    linux-headers-generic \
+    gcc-10 \
+    make \
+    g++-10 \
+    autoconf \
+    automake \
+    libtool \
+    patch \
+    libpcre3-dev \
+    libpcre3 \
+    python3-dev \
+    libffi-dev \
+    libxml2-dev \
+    libxslt-dev
+
+# Use gcc 10
+RUN update-alternatives \
+    --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 \
+    --slave /usr/bin/g++ g++ /usr/bin/g++-10 \
+    --slave /usr/bin/gcov gcov /usr/bin/gcov-10 \
+    --slave /usr/bin/x86_64-linux-gnu-gcc x86_64-linux-gnu-gcc /usr/bin/x86_64-linux-gnu-gcc-10
+
+# Link python to python3
+RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # Create the src directory
 RUN mkdir -p ${SRC_DIR}
@@ -51,7 +73,7 @@ RUN pip install setuptools==44.1.0
 # Fetch and build CKAN and requirements
 RUN pip install -e git+${GIT_URL}@${GIT_BRANCH}#egg=ckan
 
-# Copy patches and apply patches scripts
+# Copy patches and apply patches script
 COPY ./patches ${SRC_DIR}/patches
 COPY ./scripts/apply_ckan_patches.sh ${SRC_DIR}/apply_ckan_patches.sh
 
@@ -59,33 +81,36 @@ COPY ./scripts/apply_ckan_patches.sh ${SRC_DIR}/apply_ckan_patches.sh
 RUN ${SRC_DIR}/apply_ckan_patches.sh
 RUN rm -rf /srv/app/src/ckan/.git
 RUN pip wheel --wheel-dir=/wheels -r ckan/requirements.txt
-RUN pip wheel --wheel-dir=/wheels uwsgi==2.0.19.1 gevent==21.1.2 greenlet==1.1.0
+RUN pip wheel --wheel-dir=/wheels uwsgi==2.0.20 gevent==21.12.0 greenlet==1.1.3
 
 
 ###########################
 ### Default-Extensions ####
 ###########################
-FROM alpine:3.13.7 as extbuild
+FROM ubuntu:focal-20220316 AS extbuild
 
 # Set src dirs
 ENV SRC_DIR=/srv/app/src
 ENV PIP_SRC=${SRC_DIR}
 
 # List of default extensions
-ENV DEFAULT_EXTENSIONS envvars s3filestore
+ENV DEFAULT_EXTENSIONS="envvars s3filestore"
 
 # Locations and tags, please use specific tags or revisions
 ENV ENVVARS_GIT_URL=https://github.com/okfn/ckanext-envvars
-ENV ENVVARS_GIT_BRANCH=0.0.1
+ENV ENVVARS_GIT_BRANCH=v0.0.6
 
+ENV S3FILESTORE_GIT_RAW_URL=https://raw.githubusercontent.com/keitaroinc/ckanext-s3filestore
 ENV S3FILESTORE_GIT_URL=https://github.com/keitaroinc/ckanext-s3filestore
-ENV S3FILESTORE_GIT_BRANCH=v1.0.0
+ENV S3FILESTORE_GIT_BRANCH=v1.0.1
 
-RUN apk add --no-cache \
-        git \
-        curl \
-        python3 \
-        python3-dev
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+       git \
+       curl \
+       ca-certificates \
+       python3 \
+       python3-dev
 
 # Link python to python3
 RUN ln -s /usr/bin/python3 /usr/bin/python
@@ -97,18 +122,36 @@ RUN mkdir -p ${SRC_DIR}
 RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
     python ${SRC_DIR}/get-pip.py
 
+# Downgrade setuptools so that CKAN requirements can be built
+RUN pip install setuptools==44.1.0
+
 # Fetch and build the default CKAN extensions
 RUN pip wheel --wheel-dir=/wheels git+${ENVVARS_GIT_URL}@${ENVVARS_GIT_BRANCH}#egg=ckanext-envvars
 RUN pip wheel --wheel-dir=/wheels git+${S3FILESTORE_GIT_URL}@${S3FILESTORE_GIT_BRANCH}#egg=ckanext-s3filestore
-RUN pip wheel --wheel-dir=/wheels -r https://raw.githubusercontent.com/keitaroinc/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
-RUN curl -o /wheels/s3filestore.txt https://raw.githubusercontent.com/keitaroinc/ckanext-s3filestore/${S3FILESTORE_GIT_BRANCH}/requirements.txt
+RUN pip wheel --wheel-dir=/wheels -r ${S3FILESTORE_GIT_RAW_URL}/${S3FILESTORE_GIT_BRANCH}/requirements.txt
+RUN curl -o /wheels/s3filestore.txt ${S3FILESTORE_GIT_RAW_URL}/${S3FILESTORE_GIT_BRANCH}/requirements.txt
 
-############
-### MAIN ###
-############
-FROM alpine:3.13.7
 
+################
+## Build Main ##
+################
+FROM ubuntu:focal-20220316
 LABEL author="eHealth Africa"
+
+# Set timezone
+ENV TZ=UTC
+RUN ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+
+# Set Locale
+ENV LC_ALL=en_US.UTF-8
+
+# Set the locale
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y locales && \
+    sed -i "/${LC_ALL}/s/^# //g" /etc/locale.gen && \
+    dpkg-reconfigure --frontend=noninteractive locales && \
+    update-locale LANG=${LC_ALL} && \
+    rm -rf /var/lib/apt/lists/*
 
 ENV APP_DIR=/srv/app
 ENV SRC_DIR=/srv/app/src
@@ -116,22 +159,27 @@ ENV CKAN_DIR=${SRC_DIR}/ckan
 ENV DATA_DIR=/srv/app/data
 ENV PIP_SRC=${SRC_DIR}
 ENV CKAN_SITE_URL=http://localhost:5000
-ENV CKAN__PLUGINS envvars s3filestore image_view text_view recline_view datastore datapusher
+ENV CKAN__PLUGINS="envvars s3filestore image_view text_view recline_view datastore datapusher"
 
-# Install necessary packages to run CKAN
-RUN apk add --no-cache git \
-        bash \
-        git \
+# Install ncessary packages to run CKAN
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
         gettext \
         curl \
+        ca-certificates \
+        libpq5 \
+        git \
         postgresql-client \
         python3 \
-        libmagic \
-        pcre \
-        libxslt \
+        python3-distutils \
+        libpython3.8 \
+        libmagic1 \
+        libpcre3 \
+        libxslt1.1 \
         libxml2 \
         tzdata \
         apache2-utils && \
+    rm -rf /var/lib/apt/lists/* && \
     # Create SRC_DIR
     mkdir -p ${SRC_DIR} && \
     # Link python to python3
@@ -141,17 +189,20 @@ RUN apk add --no-cache git \
 RUN curl -o ${SRC_DIR}/get-pip.py https://bootstrap.pypa.io/get-pip.py && \
     python ${SRC_DIR}/get-pip.py
 
+# Downgrade setuptools so that CKAN requirements can be built
+RUN pip install setuptools==44.1.0
+
 # Get artifacts from build stages
-COPY --from=ckanbuild /wheels /srv/app/wheels
-COPY --from=extbuild /wheels /srv/app/ext_wheels
 COPY --from=ckanbuild /srv/app/src/ckan ${CKAN_DIR}
+COPY --from=ckanbuild /wheels           /srv/app/wheels
+COPY --from=extbuild  /wheels           /srv/app/ext_wheels
 
 # Additional install steps for build stages artifacts
-RUN pip install --no-index --find-links=/srv/app/wheels uwsgi==2.0.19.1 gevent==21.1.2
+RUN pip install --no-index --find-links=/srv/app/wheels uwsgi==2.0.20 gevent==21.12.0
 
 # Create a local user and group to run the app
-RUN addgroup -g 92 -S ckan && \
-    adduser -u 92 -h /srv/app -H -D -S -G ckan ckan
+RUN groupadd -g 92 ckan && \
+    useradd -rm -d /srv/app -s /bin/bash -g ckan -u 92 ckan
 
 WORKDIR ${CKAN_DIR}
 
@@ -163,8 +214,6 @@ RUN pip install -e /srv/app/src/ckan && \
     pip install --no-index --find-links=/srv/app/ext_wheels ckanext-envvars ckanext-s3filestore && \
     pip install --no-index --find-links=/srv/app/ext_wheels -r /srv/app/ext_wheels/s3filestore.txt && \
     # Create and update CKAN config
-    # Set timezone
-    echo "UTC" >  /etc/timezone && \
     # Generate CKAN config
     ckan generate config ${APP_DIR}/production.ini && \
     # Configure plugins
@@ -186,10 +235,10 @@ COPY setup/app ${APP_DIR}
 
 WORKDIR ${APP_DIR}
 
-# Create entrypoint directory for children image scripts
+# Create entry point directory for children image scripts
 ONBUILD RUN mkdir docker-entrypoint.d
 
-# Create afterinit directory for children image scripts
+# Create after init directory for children image scripts
 ONBUILD RUN mkdir docker-afterinit.d
 
 EXPOSE 5000
@@ -198,4 +247,4 @@ HEALTHCHECK --interval=10s --timeout=5s --retries=5 CMD curl --fail http://local
 
 USER ckan
 
-CMD ["/srv/app/start_ckan.sh"]
+CMD [ "/srv/app/start_ckan.sh" ]
